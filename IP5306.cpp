@@ -1,6 +1,17 @@
 #include <Wire.h>
 #include "IP5306.h"
 
+/*
+    Notice:
+    endTransmission() returns:
+    0: success.
+    1: data too long to fit in transmit buffer.
+    2: received NACK on transmit of address.
+    3: received NACK on transmit of data.
+    4: other error.
+    5: timeout
+*/
+
 
 void IP5306::begin(uint8_t sdaPin, uint8_t sclPin) {
     Wire.begin(sdaPin, sclPin);
@@ -10,24 +21,38 @@ uint8_t IP5306::writeBytes(uint8_t addr, uint8_t reg, uint8_t *data, uint8_t qua
     Wire.beginTransmission(addr);
     Wire.write(reg);
     Wire.write(data, quantity);
-    return Wire.endTransmission() == I2C_ERROR_OK;
+    uint8_t res = Wire.endTransmission();
+    if (res != 0) {
+        log_e("IP5306 i2c write error: %d", res);
+    }
+    return res;
 
 }
 uint8_t IP5306::readBytes(uint8_t addr, uint8_t reg, uint8_t *data, uint8_t quantity) {
     Wire.beginTransmission(addr);
     Wire.write(reg);
-    if (Wire.endTransmission(false) != I2C_ERROR_OK) { return 0; }
+    uint8_t res = Wire.endTransmission(false);
+    if (res != 0) {
+        log_e("IP5306 i2c write error: %d", res);
+        return 0; 
+    }
 
+    // read quantity bytes from I2C
     Wire.requestFrom(addr, quantity);
     uint8_t i = 0;
     while (Wire.available() && i < quantity) {
         data[i] = Wire.read();
         i++;
     }
+    // clear buffer
     while (Wire.available()) {
         Wire.read(); 
     }
-    return i == quantity;
+    // check if read as much as needed
+    if (i < quantity) {
+        log_e("IP5306 i2c read error");
+    }
+    return i;
 }
 
 uint8_t IP5306::setup(uint8_t initPrms /*= IP5306_DEFAULT_SETUP*/) {
