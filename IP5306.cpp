@@ -14,7 +14,8 @@
 
 
 void IP5306::begin(uint8_t sdaPin, uint8_t sclPin) {
-    Wire.begin(sdaPin, sclPin);
+    Wire.setPins(sdaPin, sclPin);
+    Wire.begin();
 }
 
 uint8_t IP5306::writeBytes(uint8_t addr, uint8_t reg, uint8_t *data, uint8_t quantity) {
@@ -36,7 +37,6 @@ uint8_t IP5306::readBytes(uint8_t addr, uint8_t reg, uint8_t *data, uint8_t quan
         log_e("IP5306 i2c write error: %d", res);
         return 0; 
     }
-
     // read quantity bytes from I2C
     Wire.requestFrom(addr, quantity);
     uint8_t i = 0;
